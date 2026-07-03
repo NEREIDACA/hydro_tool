@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEREIDA — Density Forecast Map Viewer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+          background:#F5F4F0;color:#2C2C2A;font-size:13px}
+header{background:#065A82;color:#fff;padding:0.7rem 1.25rem;
+       display:flex;align-items:center;gap:1rem;flex-wrap:wrap;flex-shrink:0}
+header h1{font-size:15px;font-weight:600;letter-spacing:0.01em}
+header p{font-size:12px;opacity:0.7}
+.controls{background:#fff;border-bottom:1px solid #D9D8D4;
+          padding:0.5rem 1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;flex-shrink:0}
+.controls label{font-size:11px;font-weight:500;color:#888780;
+                text-transform:uppercase;letter-spacing:0.05em;margin-right:0.25rem}
+.controls select{font-size:13px;font-weight:500;background:#F5F4F0;color:#2C2C2A;
+                 border:0.5px solid #D9D8D4;border-radius:5px;padding:5px 8px;
+                 outline:none;cursor:pointer}
+.controls select:focus{border-color:#065A82}
+.legend{background:#fff;border-bottom:1px solid #D9D8D4;padding:0.4rem 1rem;
+        font-size:11px;color:#2C2C2A;display:flex;flex-wrap:wrap;gap:1.1rem;align-items:center;flex-shrink:0}
+.legend-title{font-weight:600;font-size:11px;color:#888780;text-transform:uppercase;
+              letter-spacing:0.05em;white-space:nowrap}
+.legend-item{display:flex;align-items:center;gap:0.35rem;white-space:nowrap}
+.leg-swatch{display:inline-block;width:14px;height:14px;border-radius:2px;flex-shrink:0}
+.leg-line{display:inline-block;width:20px;height:2px;flex-shrink:0}
+.leg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;
+         background:#FFE600;border:1.5px solid #aaa;flex-shrink:0}
+.map-legend{display:flex;gap:1rem;margin-left:auto;border-left:1px solid #D9D8D4;padding-left:1rem}
+.map-legend-item{display:flex;align-items:center;gap:0.4rem;font-size:11px}
+.ml-dot{width:12px;height:12px;border-radius:50%;border:2px solid rgba(0,0,0,0.3);flex-shrink:0}
+
+.layout{display:flex;height:calc(100vh - 40px - 42px - 36px - 36px);overflow:hidden}
+
+#map-panel{width:42%;flex-shrink:0;border-right:1px solid #D9D8D4;position:relative}
+#map{height:100%;width:100%}
+
+#plot-panel{flex:1;overflow-y:auto;background:#F5F4F0}
+.plot-header{padding:0.6rem 1rem;background:#fff;border-bottom:0.5px solid #D9D8D4;
+             display:flex;align-items:center;gap:0.75rem;position:sticky;top:0;z-index:10}
+.plot-header h2{font-size:13px;font-weight:600;color:#2C2C2A}
+.plot-header .basin-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;
+                         text-transform:uppercase;letter-spacing:0.05em}
+.basin-ter{background:#E3F0FA;color:#065A82}
+.basin-tordera{background:#E3F0FA;color:#065A82}
+.basin-reservoir{background:#FFF3E0;color:#E65100}
+
+.plot-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+            height:100%;color:#888780;gap:0.75rem;padding:2rem;text-align:center}
+.plot-empty svg{opacity:0.25}
+.plot-empty p{font-size:13px}
+
+.plot-grid{display:grid;grid-template-columns:1fr;gap:0.6rem;padding:0.75rem}
+.img-card{background:#fff;border-radius:8px;border:0.5px solid #D9D8D4;overflow:hidden}
+.card-title{font-size:11px;font-weight:600;color:#2C2C2A;
+            padding:0.35rem 0.75rem;border-bottom:0.5px solid #F0EFE9;background:#F8F7F3}
+.img-wrap{position:relative;background:#f0f0ed}
+.img-wrap img{width:100%;height:auto;display:block}
+.img-wrap .placeholder{padding:1.5rem;text-align:center;color:#888780;
+                        font-size:12px;font-style:italic}
+
+#statusBar{font-size:11px;color:#888780;margin-left:auto}
+
+/* Leaflet popup style */
+.leaflet-popup-content b{color:#065A82}
+.station-popup{font-size:12px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NEREIDA — Seasonal Density Forecast</h1>
+  <p>Seleccioneu una estació al mapa per veure la previsió</p>
+</header>
+
+<div class="controls">
+  <div>
+    <label for="selYear">Any</label>
+    <select id="selYear"></select>
+  </div>
+  <div>
+    <label for="selMonth">Mes</label>
+    <select id="selMonth">
+      <option value="01">Gener</option><option value="02">Febrer</option>
+      <option value="03">Març</option><option value="04">Abril</option>
+      <option value="05">Maig</option><option value="06">Juny</option>
+      <option value="07">Juliol</option><option value="08">Agost</option>
+      <option value="09">Setembre</option><option value="10">Octubre</option>
+      <option value="11">Novembre</option><option value="12">Desembre</option>
+    </select>
+  </div>
+  <span id="statusBar"></span>
+</div>
+
+<div class="legend">
+  <span class="legend-title">Llegenda</span>
+  <span class="legend-item"><span class="leg-swatch" style="background:rgba(173,216,230,0.9)"></span>Per sobre del normal (&gt;P66)</span>
+  <span class="legend-item"><span class="leg-swatch" style="background:rgba(180,180,180,0.35);border:1px solid #ccc"></span>Normal (P33–P66)</span>
+  <span class="legend-item"><span class="leg-swatch" style="background:rgba(255,165,0,0.25);border:1px solid #f5c870"></span>Per sota del normal (&lt;P33)</span>
+  <span class="legend-item"><span class="leg-line" style="background:#8B0000;opacity:0.7"></span>P10</span>
+  <span class="legend-item"><span class="leg-line" style="background:#00008B;opacity:0.7"></span>P90</span>
+  <span class="legend-item"><span class="leg-line" style="background:#000"></span>KDE ensemble</span>
+  <span class="legend-item"><span class="leg-dot"></span>Membres</span>
+  <span class="legend-item"><span class="leg-line" style="background:#D81B60;height:2.5px"></span>Observat</span>
+  <span class="legend-item" style="border-left:1px solid #D9D8D4;padding-left:1rem">
+    <span style="color:#2E7D32;font-weight:700;font-size:15px;line-height:1">*</span>&nbsp;Bon skill (NSE&gt;0 &amp; RPSS≥0.1)
+  </span>
+  <span class="legend-item"><span style="color:#F9A825;font-weight:700;font-size:15px;line-height:1">*</span>&nbsp;Skill baix</span>
+  <span class="legend-item"><span style="color:#C62828;font-weight:700;font-size:15px;line-height:1">*</span>&nbsp;Sense skill</span>
+  <span class="map-legend">
+    <span class="map-legend-item"><span class="ml-dot" style="background:#065A82"></span>Estació cabal</span>
+    <span class="map-legend-item"><span class="ml-dot" style="background:#E65100"></span>Embassament</span>
+  </span>
+</div>
+
+<div class="layout">
+  <div id="map-panel">
+    <div id="map"></div>
+  </div>
+  <div id="plot-panel">
+    <div class="plot-empty" id="emptyMsg">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5">
+        <circle cx="12" cy="10" r="4"/><path d="M12 2C8 2 4 5.5 4 10c0 5.5 8 12 8 12s8-6.5 8-12c0-4.5-4-8-8-8z"/>
+      </svg>
+      <p>Seleccioneu una estació al mapa per veure la previsió estacional</p>
+    </div>
+    <div id="plotContent" style="display:none">
+      <div class="plot-header" id="plotHeader">
+        <h2 id="stationName"></h2>
+        <span class="basin-tag" id="basinTag"></span>
+      </div>
+      <div class="plot-grid" id="plotGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Year selector ─────────────────────────────────────────────────────────────
+const selYear  = document.getElementById("selYear");
+const selMonth = document.getElementById("selMonth");
+for (let y = 2026; y >= 1995; y--) {
+  const o = document.createElement("option");
+  o.value = y; o.textContent = y;
+  selYear.appendChild(o);
+}
+selYear.value  = "2026";
+selMonth.value = "06";
+
+// ── Station definitions ───────────────────────────────────────────────────────
+const STATIONS = [
+  // ── Ter basin ──
+  {
+    id: "ter_ripoll",
+    name: "Ter a Ripoll",
+    basin: "Ter", basinClass: "basin-ter",
+    coords: [42.199, 2.191],
+    color: "#065A82",
+    plots: [
+      { file: "Q_ter_ripoll.png",       label: "Cabal (m³/s)" },
+      { file: "rivtemp_ter_ripoll.png", label: "Temperatura del riu (°C)" }
+    ]
+  },
+  {
+    id: "ter_sau",
+    name: "Ter a Roda de Ter (entrada Sau)",
+    basin: "Ter", basinClass: "basin-ter",
+    coords: [41.980, 2.308],
+    color: "#065A82",
+    plots: [
+      { file: "Q_ter_sau.png",       label: "Cabal (m³/s)" },
+      { file: "rivtemp_ter_sau.png", label: "Temperatura del riu (°C)" }
+    ]
+  },
+  {
+    id: "ter_gola",
+    name: "Gola del Ter (desembocadura)",
+    basin: "Ter", basinClass: "basin-ter",
+    coords: [42.042, 3.127],
+    color: "#065A82",
+    plots: [
+      { file: "Q_ter_gola.png",       label: "Cabal (m³/s)" },
+      { file: "rivtemp_ter_gola.png", label: "Temperatura del riu (°C)" }
+    ]
+  },
+  // ── Reservoirs ──
+  {
+    id: "sau",
+    name: "Embassament de Sau",
+    basin: "Embassament", basinClass: "basin-reservoir",
+    coords: [41.979, 2.405],
+    color: "#E65100",
+    plots: [
+      { file: "V_ter_all.png",              label: "Volum sistema Sau–Susqueda (hm³)" },
+      { file: "reservoir_Tsurf_Sau.png",    label: "Temperatura superfície Sau (°C)" },
+      { file: "reservoir_Tbottom_Sau.png",  label: "Temperatura fons Sau (°C)" }
+    ]
+  },
+  {
+    id: "susqueda",
+    name: "Embassament de Susqueda",
+    basin: "Embassament", basinClass: "basin-reservoir",
+    coords: [41.974, 2.487],
+    color: "#E65100",
+    plots: [
+      { file: "reservoir_Tsurf_Susqueda.png",   label: "Temperatura superfície Susqueda (°C)" },
+      { file: "reservoir_Tbottom_Susqueda.png", label: "Temperatura fons Susqueda (°C)" }
+    ]
+  },
+  // ── Tordera basin ──
+  {
+    id: "tordera_santceloni",
+    name: "Tordera a Sant Celoni",
+    basin: "Tordera", basinClass: "basin-tordera",
+    coords: [41.692, 2.509],
+    color: "#065A82",
+    plots: [
+      { file: "Q_tordera_santceloni.png",       label: "Cabal (m³/s)" },
+      { file: "rivtemp_tordera_santceloni.png", label: "Temperatura del riu (°C)" }
+    ]
+  },
+  {
+    id: "tordera_fogars",
+    name: "Tordera a Fogars de la Selva",
+    basin: "Tordera", basinClass: "basin-tordera",
+    coords: [41.721, 2.705],
+    color: "#065A82",
+    plots: [
+      { file: "Q_tordera_fogars.png",       label: "Cabal (m³/s)" },
+      { file: "rivtemp_tordera_fogars.png", label: "Temperatura del riu (°C)" }
+    ]
+  },
+  {
+    id: "tordera_coast",
+    name: "Tordera a la Costa",
+    basin: "Tordera", basinClass: "basin-tordera",
+    coords: [41.648, 2.776],
+    color: "#065A82",
+    plots: [
+      { file: "Q_tordera_coast.png",       label: "Cabal (m³/s)" },
+      { file: "rivtemp_tordera_coast.png", label: "Temperatura del riu (°C)" }
+    ]
+  }
+];
+
+// ── Leaflet map ───────────────────────────────────────────────────────────────
+const map = L.map("map").setView([41.95, 2.55], 9);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors",
+  maxZoom: 18
+}).addTo(map);
+
+let activeMarker = null;
+
+STATIONS.forEach(st => {
+  const marker = L.circleMarker(st.coords, {
+    radius: 9,
+    fillColor: st.color,
+    color: "#fff",
+    weight: 2,
+    opacity: 1,
+    fillOpacity: 0.9
+  }).addTo(map);
+
+  marker.bindTooltip(st.name, { direction: "top", offset: [0, -8] });
+
+  marker.on("click", () => {
+    // Reset previous active marker
+    if (activeMarker && activeMarker !== marker) {
+      activeMarker.setStyle({ weight: 2, radius: 9 });
+    }
+    marker.setStyle({ weight: 3, radius: 11 });
+    activeMarker = marker;
+    selectStation(st);
+  });
+
+  st._marker = marker;
+});
+
+// ── Station selection ─────────────────────────────────────────────────────────
+let currentStation = null;
+
+function selectStation(st) {
+  currentStation = st;
+  document.getElementById("emptyMsg").style.display    = "none";
+  document.getElementById("plotContent").style.display = "block";
+  document.getElementById("stationName").textContent   = st.name;
+  const tag = document.getElementById("basinTag");
+  tag.textContent  = st.basin;
+  tag.className    = "basin-tag " + st.basinClass;
+  loadImages();
+}
+
+// ── Load images ───────────────────────────────────────────────────────────────
+function loadImages() {
+  if (!currentStation) return;
+  const yr  = selYear.value;
+  const mo  = selMonth.value;
+  const key = yr + "-" + mo;
+  const base = "density_plots/" + key + "/";
+
+  document.getElementById("statusBar").textContent = "Previsió: " + key;
+
+  const grid = document.getElementById("plotGrid");
+  grid.innerHTML = "";
+
+  currentStation.plots.forEach(({ file, label }) => {
+    const card = document.createElement("div");
+    card.className = "img-card";
+    card.innerHTML = `<div class="card-title">${label}</div>
+                      <div class="img-wrap" id="wrap_${file.replace(".png","")}"></div>`;
+    grid.appendChild(card);
+
+    const wrap = card.querySelector(".img-wrap");
+    const img  = document.createElement("img");
+    img.alt    = file;
+    img.onerror = function() {
+      this.style.display = "none";
+      let ph = wrap.querySelector(".placeholder");
+      if (!ph) { ph = document.createElement("div"); ph.className = "placeholder"; wrap.appendChild(ph); }
+      ph.textContent = "No disponible per " + key;
+    };
+    img.onload = function() {
+      this.style.display = "block";
+      const ph = wrap.querySelector(".placeholder");
+      if (ph) ph.remove();
+    };
+    wrap.appendChild(img);
+    img.src = base + file + "?t=" + Date.now();
+  });
+}
+
+selYear.addEventListener("change",  loadImages);
+selMonth.addEventListener("change", loadImages);
+</script>
+</body>
+</html>
