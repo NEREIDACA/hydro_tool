@@ -64,6 +64,16 @@ each monthly run:
 No manual step is normally required; to publish a month out of band, mirror
 those same two copy steps by hand.
 
+## About NEREIDA
+
+Built by Daniel Mercado-Bettín, Rafael Marcé and Jordi Pagès at the Centre d'Estudis
+Avançats de Blanes (CEAB–CSIC). Applied here to Sau and Susqueda, the tandem
+reservoirs on the River Ter that supply drinking water to the Barcelona
+metropolitan area — a system pushed to record lows during the 2021–2024
+Catalan drought. Both reservoirs are managed by the Agència Catalana de
+l'Aigua (ACA); this work is part of the NEREIDA project, grant
+RDI001/24/000044, funded by ACA under the R+D+I call ACC/1362/2024.
+
 ## Related NEREIDA tools
 
 - [`NEREIDACA/main`](https://github.com/NEREIDACA/main) — the forecasting
