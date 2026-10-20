@@ -69,6 +69,28 @@ header p{font-size:12px;opacity:0.7}
 /* Leaflet popup style */
 .leaflet-popup-content b{color:#065A82}
 .station-popup{font-size:12px;line-height:1.6}
+
+/* Methodology modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,25,28,0.55);display:none;
+               align-items:flex-start;justify-content:center;z-index:1000;padding:4vh 1rem;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:10px;max-width:880px;width:100%;padding:1.75rem 2rem 2rem;
+           box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.modal-box h2{font-size:19px;color:#065A82;margin-bottom:0.5rem}
+.modal-box h3{font-size:14px;color:#2C2C2A;margin:1.4rem 0 0.5rem}
+.modal-box p{font-size:13px;line-height:1.6;color:#3a3a38;margin-bottom:0.6rem}
+.modal-box p.note{font-size:11.5px;color:#888780;font-style:italic}
+.modal-close{float:right;background:none;border:none;font-size:22px;color:#888780;cursor:pointer;line-height:1}
+.skill-table{width:100%;border-collapse:collapse;font-size:12px;margin:0.6rem 0 1rem}
+.skill-table th,.skill-table td{padding:5px 8px;text-align:right;border-bottom:1px solid #F0EFE9}
+.skill-table th:first-child,.skill-table td:first-child{text-align:left}
+.skill-table thead th{background:#F8F7F3;color:#888780;font-weight:600;text-transform:uppercase;font-size:10.5px;letter-spacing:0.04em}
+.skill-table td.better{color:#2E7D32;font-weight:700}
+.skill-table td.worse{color:#C62828}
+.skill-table tr.sep td{border-top:2px solid #D9D8D4}
+.method-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.badge-op{background:#F0EFE9;color:#555}
+.badge-qm{background:#E3F0FA;color:#065A82}
 </style>
 </head>
 <body>
@@ -76,6 +98,7 @@ header p{font-size:12px;opacity:0.7}
 <header>
   <h1>NEREIDA — Seasonal Density Forecast</h1>
   <p>Seleccioneu una estació al mapa per veure la previsió</p>
+  <button id="btnMethod" onclick="openMethod()" style="margin-left:auto;font-size:12px;padding:5px 12px;border-radius:5px;border:1px solid rgba(255,255,255,0.5);background:transparent;color:#fff;cursor:pointer;white-space:nowrap">Metodologia i validació &rarr;</button>
 </header>
 
 <div class="controls">
@@ -106,6 +129,7 @@ header p{font-size:12px;opacity:0.7}
   <span class="legend-item"><span class="leg-line" style="background:#8B0000;opacity:0.7"></span>P10</span>
   <span class="legend-item"><span class="leg-line" style="background:#00008B;opacity:0.7"></span>P90</span>
   <span class="legend-item"><span class="leg-line" style="background:#000"></span>KDE ensemble</span>
+  <span class="legend-item"><span class="leg-line" style="background:#3d7fa6;height:2.5px"></span>KDE corregida (QM)</span>
   <span class="legend-item"><span class="leg-dot"></span>Membres</span>
   <span class="legend-item"><span class="leg-line" style="background:#D81B60;height:2.5px"></span>Observat</span>
   <span class="legend-item" style="border-left:1px solid #D9D8D4;padding-left:1rem">
@@ -117,6 +141,33 @@ header p{font-size:12px;opacity:0.7}
     <span class="map-legend-item"><span class="ml-dot" style="background:#065A82"></span>Estació cabal</span>
     <span class="map-legend-item"><span class="ml-dot" style="background:#E65100"></span>Embassament</span>
   </span>
+</div>
+
+<div class="modal-overlay" id="methodOverlay" onclick="if(event.target===this)closeMethod()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeMethod()" aria-label="Tanca">&times;</button>
+    <h2>Per què hi ha dues corbes al gràfic?</h2>
+    <p>Cada panell mostra la distribució de probabilitat (corba negra, <b>KDE ensemble</b>) de 51 escenaris de clima possibles, produïts amb el model estacional ECMWF SEAS5 i convertits a cabal/volum amb el model hidrològic GR4J. Per a l'<b>entrada d'aigua al pantà de Sau</b> (i per tant per al volum Sau–Susqueda) hi ha una segona corba blava: la mateixa predicció, però corregida del biaix sistemàtic que té aquest mètode.</p>
+
+    <h3>El problema: un biaix sec sistemàtic</h3>
+    <p>Comparant 26 anys de predicció (1995–2020) amb les dades observades, la predicció operacional de cabal a Sau és sistemàticament massa seca: <b>entre un −28% i un −54%</b> per sota del que de debò va passar, i pitjor a l'estiu. Un terç d'aquest error ve de la predicció de clima SEAS5 (massa seca i massa càlida a l'estiu respecte a ERA5), i la resta del propi model GR4J.</p>
+
+    <h3>La correcció: quantile mapping</h3>
+    <p>S'aplica un <i>quantile mapping</i> empíric a la precipitació i temperatura de SEAS5 abans d'entrar-les al GR4J: per a cada mes de l'any i cada horitzó (mes 1 vs. mesos 2–7), es transforma la distribució estadística del clima previst perquè coincideixi amb la distribució real observada (ERA5), any per any, sense tocar el model hidrològic. Els anys d'entrenament (1995–2020) s'avaluen amb <i>leave-one-year-out</i> perquè la validació no estigui esbiaixada.</p>
+
+    <h3>Comparació de skill: operacional vs. corregida</h3>
+    <p class="note">NSE: encert respecte a la mitjana observada (1 = perfecte, 0 = tan bo com predir sempre la mitjana, negatiu = pitjor que la mitjana). CRPSS: encert probabilístic respecte a la climatologia (igual escala). Mitjana sobre tots els mesos d'inicialització, 1995–2026.</p>
+    <table class="skill-table" id="skillTable">
+      <thead><tr><th>Variable</th><th>Horitzó</th><th>NSE operacional</th><th>NSE corregida</th><th>CRPSS operacional</th><th>CRPSS corregida</th></tr></thead>
+      <tbody><tr><td colspan="6" style="text-align:center;color:#888780;padding:14px">Carregant…</td></tr></tbody>
+    </table>
+
+    <h3>Un resultat important: millora el cabal, però no (encara) el volum</h3>
+    <p>La correcció millora clarament l'encert del <b>cabal d'entrada a Sau</b> a tots els horitzons — per exemple, l'NSE a 6 mesos puja de <b>&minus;0,42</b> (operacional, pitjor que predir sempre la mitjana) a <b>&minus;0,16</b>. Però, sorprenentment, el <b>volum combinat Sau–Susqueda</b> surt una mica <i>pitjor</i> amb la correcció, no millor: l'NSE a 6 mesos baixa de <b>0,34</b> a <b>0,15</b>, i a 7 mesos passa de tenir encert positiu (0,21) a no tenir-ne (&minus;0,04).</p>
+    <p>El motiu més probable: el biaix sec de la predicció operacional de cabal, per pura casualitat, compensava en part altres errors del balanç hídric (inclòs el fet que SEAS5 no va preveure la sequera real del 2022–24 amb prou antelació). En corregir només el cabal, aquesta compensació fortuïta desapareix. Per això es mostren totes dues corbes a cada gràfica: la corregida és la millor estimació del <i>cabal</i>, però l'operacional continua sent, de moment, la referència més fiable per al <i>volum de l'embassament</i> i per a les decisions de gestió.</p>
+
+    <p class="note">Correcció validada només per a l'entrada d'aigua a Sau (<code>Q_ter_sau</code>) i, per tant, pel volum combinat Sau–Susqueda (<code>V_ter_all</code>) — no (encara) per als altres punts del mapa. Mitjana sobre ~360 parells predicció–observació per horitzó, 1995–2026. Detalls complets a <code>seasonal/bias_correction/</code> al repositori.</p>
+  </div>
 </div>
 
 <div class="layout">
@@ -369,6 +420,49 @@ function loadImages() {
 
 selYear.addEventListener("change",  loadImages);
 selMonth.addEventListener("change", loadImages);
+
+// ── Methodology modal ────────────────────────────────────────────────────────
+let skillLoaded = false;
+function openMethod() {
+  document.getElementById("methodOverlay").classList.add("open");
+  if (!skillLoaded) loadSkillTable();
+}
+function closeMethod() { document.getElementById("methodOverlay").classList.remove("open"); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeMethod(); });
+
+function parseCsv(text) {
+  const lines = text.trim().split("\n");
+  const cols = lines[0].split(",");
+  return lines.slice(1).map(l => {
+    const vals = l.split(","); const row = {};
+    cols.forEach((c, i) => row[c] = vals[i]);
+    return row;
+  });
+}
+const VAR_LABEL = { Q_ter_sau: "Cabal entrada Sau (m³/s)", V_ter_all: "Volum Sau–Susqueda (hm³)" };
+async function loadSkillTable() {
+  const tbody = document.querySelector("#skillTable tbody");
+  try {
+    const r = await fetch("skill_comparison.csv");
+    if (!r.ok) throw new Error(r.status);
+    const rows = parseCsv(await r.text());
+    skillLoaded = true;
+    const fmt = v => (v === "" || v === undefined || v === "NA") ? "—" : (+v).toFixed(2);
+    const cls = (op, qm) => (op === "" || qm === "" || op === "NA" || qm === "NA") ? "" :
+      (+qm > +op ? "better" : (+qm < +op ? "worse" : ""));
+    tbody.innerHTML = rows.map((row, i) => {
+      const sep = (i === 0 || rows[i - 1].variable !== row.variable) ? " sep" : "";
+      return `<tr class="${sep.trim()}">
+        <td>${i === 0 || rows[i - 1].variable !== row.variable ? VAR_LABEL[row.variable] || row.variable : ""}</td>
+        <td>t+${row.lead}</td>
+        <td>${fmt(row.nse_op)}</td><td class="${cls(row.nse_op, row.nse_qm)}">${fmt(row.nse_qm)}</td>
+        <td>${fmt(row.crpss_op)}</td><td class="${cls(row.crpss_op, row.crpss_qm)}">${fmt(row.crpss_qm)}</td>
+      </tr>`;
+    }).join("");
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#888780;padding:14px">Taula de validació no disponible (${e.message}).</td></tr>`;
+  }
+}
 </script>
 </body>
 </html>
