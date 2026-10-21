@@ -147,13 +147,13 @@ header p{font-size:12px;opacity:0.7}
   <div class="modal-box">
     <button class="modal-close" onclick="closeMethod()" aria-label="Tanca">&times;</button>
     <h2>Per què hi ha dues corbes al gràfic?</h2>
-    <p>Cada panell mostra la distribució de probabilitat (corba negra, <b>KDE ensemble</b>) de 51 escenaris de clima possibles, produïts amb el model estacional ECMWF SEAS5 i convertits a cabal/volum amb el model hidrològic GR4J. Per a l'<b>entrada d'aigua al pantà de Sau</b> (i per tant per al volum Sau–Susqueda) hi ha una segona corba blava: la mateixa predicció, però corregida del biaix sistemàtic que té aquest mètode.</p>
+    <p>Cada panell mostra la distribució de probabilitat (corba negra, <b>KDE ensemble</b>) de 51 escenaris de clima possibles, produïts amb el model estacional ECMWF SEAS5. Als punts del mapa derivats de la conca del Ter a Sau — <b>cabal d'entrada</b>, <b>volum Sau–Susqueda</b>, <b>temperatura del riu a Sau</b> i <b>temperatura a les portes dels embassaments de Sau i Susqueda</b> — hi ha una segona corba blava: la mateixa predicció, però corregida del biaix sistemàtic que té el SEAS5 en aquesta conca.</p>
 
-    <h3>El problema: un biaix sec sistemàtic</h3>
-    <p>Comparant 26 anys de predicció (1995–2020) amb les dades observades, la predicció operacional de cabal a Sau és sistemàticament massa seca: <b>entre un −28% i un −54%</b> per sota del que de debò va passar, i pitjor a l'estiu. Un terç d'aquest error ve de la predicció de clima SEAS5 (massa seca i massa càlida a l'estiu respecte a ERA5), i la resta del propi model GR4J.</p>
+    <h3>El problema: un biaix sistemàtic en la predicció de clima</h3>
+    <p>Comparant 26 anys de predicció (1995–2020) amb les dades observades, la predicció operacional de cabal a Sau és sistemàticament massa seca: <b>entre un −28% i un −54%</b> per sota del que de debò va passar, i pitjor a l'estiu. Un terç d'aquest error ve de la predicció de clima SEAS5 (massa seca i massa càlida a l'estiu respecte a ERA5), i la resta del propi model GR4J. Aquesta mateixa temperatura prevista massa càlida a l'estiu afecta també la temperatura del riu i dels embassaments, que depenen directament de la temperatura de l'aire.</p>
 
     <h3>La correcció: quantile mapping</h3>
-    <p>S'aplica un <i>quantile mapping</i> empíric a la precipitació i temperatura de SEAS5 abans d'entrar-les al GR4J: per a cada mes de l'any i cada horitzó (mes 1 vs. mesos 2–7), es transforma la distribució estadística del clima previst perquè coincideixi amb la distribució real observada (ERA5), any per any, sense tocar el model hidrològic. Els anys d'entrenament (1995–2020) s'avaluen amb <i>leave-one-year-out</i> perquè la validació no estigui esbiaixada.</p>
+    <p>S'aplica un <i>quantile mapping</i> empíric a la precipitació i temperatura de SEAS5: per a cada mes de l'any i cada horitzó (mes 1 vs. mesos 2–7), es transforma la distribució estadística del clima previst perquè coincideixi amb la distribució real observada (ERA5), any per any, sense tocar els models hidrològics. Els anys d'entrenament (1995–2020) s'avaluen amb <i>leave-one-year-out</i> perquè la validació no estigui esbiaixada. Aquesta mateixa temperatura de l'aire corregida alimenta el model de temperatura del riu (regressió lineal) i el model GLM dels embassaments (Sau i Susqueda comparteixen la mateixa sèrie de temperatura de l'aire).</p>
 
     <h3>Comparació de skill: operacional vs. corregida</h3>
     <p class="note">NSE: encert respecte a la mitjana observada (1 = perfecte, 0 = tan bo com predir sempre la mitjana, negatiu = pitjor que la mitjana). CRPSS: encert probabilístic respecte a la climatologia (igual escala). Mitjana sobre tots els mesos d'inicialització, 1995–2026.</p>
@@ -162,11 +162,11 @@ header p{font-size:12px;opacity:0.7}
       <tbody><tr><td colspan="6" style="text-align:center;color:#888780;padding:14px">Carregant…</td></tr></tbody>
     </table>
 
-    <h3>Un resultat important: millora el cabal, però no (encara) el volum</h3>
-    <p>La correcció millora clarament l'encert del <b>cabal d'entrada a Sau</b> a tots els horitzons — per exemple, l'NSE a 6 mesos puja de <b>&minus;0,42</b> (operacional, pitjor que predir sempre la mitjana) a <b>&minus;0,16</b>. Però, sorprenentment, el <b>volum combinat Sau–Susqueda</b> surt una mica <i>pitjor</i> amb la correcció, no millor: l'NSE a 6 mesos baixa de <b>0,34</b> a <b>0,15</b>, i a 7 mesos passa de tenir encert positiu (0,21) a no tenir-ne (&minus;0,04).</p>
-    <p>El motiu més probable: el biaix sec de la predicció operacional de cabal, per pura casualitat, compensava en part altres errors del balanç hídric (inclòs el fet que SEAS5 no va preveure la sequera real del 2022–24 amb prou antelació). En corregir només el cabal, aquesta compensació fortuïta desapareix. Per això es mostren totes dues corbes a cada gràfica: la corregida és la millor estimació del <i>cabal</i>, però l'operacional continua sent, de moment, la referència més fiable per al <i>volum de l'embassament</i> i per a les decisions de gestió.</p>
+    <h3>Un resultat important: ajuda la majoria de variables, però no totes</h3>
+    <p>La correcció millora clarament l'encert del <b>cabal d'entrada a Sau</b> a tots els horitzons (NSE a 6 mesos: de <b>&minus;0,42</b> a <b>&minus;0,16</b>), de la <b>temperatura del riu a Sau</b> (CRPSS passa de negatiu, pitjor que la climatologia, a positiu a tots els horitzons) i de la <b>temperatura a les tres portes de Sau</b> (petita millora consistent a tots els horitzons). Però el <b>volum combinat Sau–Susqueda</b> surt una mica <i>pitjor</i>, no millor (NSE a 6 mesos: de 0,34 a 0,15), i la <b>temperatura a les portes de Susqueda</b> tampoc millora — es manté igual o lleugerament pitjor a quasi tots els horitzons i les 4 portes.</p>
+    <p>El patró té sentit físic: Sau rep l'aigua i l'aire directament de la conca, així que corregir el biaix de SEAS5 l'ajuda de manera directa. Susqueda, en canvi, és aigües avall — la seva temperatura depèn sobretot de com surt l'aigua de Sau (cabal, temperatura, barreja), no de l'aire local, i el volum combinat integra el cabal corregit amb un pla de desembassament que, per pura casualitat, compensava en part el biaix sec operacional (inclòs el fet que SEAS5 no va preveure la sequera real del 2022–24 amb prou antelació). Per això es mostren totes dues corbes a cada gràfica: en els punts on la corregida guanya clarament, és la millor estimació; en volum i Susqueda, l'operacional continua sent, de moment, la referència més fiable.</p>
 
-    <p class="note">Correcció validada només per a l'entrada d'aigua a Sau (<code>Q_ter_sau</code>) i, per tant, pel volum combinat Sau–Susqueda (<code>V_ter_all</code>) — no (encara) per als altres punts del mapa. Mitjana sobre ~360 parells predicció–observació per horitzó, 1995–2026. Detalls complets a <code>seasonal/bias_correction/</code> al repositori.</p>
+    <p class="note">Correcció aplicada a l'aire previst sobre la conca de Sau i propagada des d'allà: cabal i volum (GR4J), temperatura del riu (regressió lineal) i temperatura dels embassaments (GLM, Sau i Susqueda comparteixen la mateixa sèrie d'aire). No validada per als altres punts del mapa (Ripoll, Gola del Ter, Tordera). Mitjana sobre ~85–370 parells predicció–observació per horitzó segons la variable (menys per a les portes més profundes, que només tenen aigua alguns mesos de l'any), 1995–2026. Detalls complets a <code>seasonal/bias_correction/</code> al repositori.</p>
   </div>
 </div>
 
@@ -266,12 +266,9 @@ const STATIONS = [
       { file: "reservoir_Tgate1_Sau.png",    label: "Temp. porta 1 Sau (384.5 m a.s.l.)" },
       { file: "reservoir_Tgate2_Sau.png",    label: "Temp. porta 2 Sau (399.0 m a.s.l.)" },
       { file: "reservoir_Tgate3_Sau.png",    label: "Temp. porta 3 Sau (413.5 m a.s.l.)" },
-      { file: "reservoir_Agegate1_Sau.png",  label: "Temps de residència porta 1 Sau (384.5 m a.s.l.)" },
-      { file: "reservoir_Agegate2_Sau.png",  label: "Temps de residència porta 2 Sau (399.0 m a.s.l.)" },
-      { file: "reservoir_Agegate3_Sau.png",  label: "Temps de residència porta 3 Sau (413.5 m a.s.l.)" },
-      { file: "reservoir_Peakgate1_Sau.png", label: "Temps fins al pic porta 1 Sau (384.5 m a.s.l.)" },
-      { file: "reservoir_Peakgate2_Sau.png", label: "Temps fins al pic porta 2 Sau (399.0 m a.s.l.)" },
-      { file: "reservoir_Peakgate3_Sau.png", label: "Temps fins al pic porta 3 Sau (413.5 m a.s.l.)" }
+      { file: "reservoir_Peakgate1_Sau.png", label: "Temps de residència porta 1 Sau (384.5 m a.s.l.)" },
+      { file: "reservoir_Peakgate2_Sau.png", label: "Temps de residència porta 2 Sau (399.0 m a.s.l.)" },
+      { file: "reservoir_Peakgate3_Sau.png", label: "Temps de residència porta 3 Sau (413.5 m a.s.l.)" }
     ]
   },
   {
@@ -285,14 +282,10 @@ const STATIONS = [
       { file: "reservoir_Tgate2_Susqueda.png",  label: "Temp. porta 2 Susqueda (319.0 m a.s.l.)" },
       { file: "reservoir_Tgate3_Susqueda.png",  label: "Temp. porta 3 Susqueda (303.0 m a.s.l.)" },
       { file: "reservoir_Tgate4_Susqueda.png",  label: "Temp. porta 4 Susqueda (287.0 m a.s.l.)" },
-      { file: "reservoir_Agegate1_Susqueda.png", label: "Temps de residència porta 1 Susqueda (335.0 m a.s.l.)" },
-      { file: "reservoir_Agegate2_Susqueda.png", label: "Temps de residència porta 2 Susqueda (319.0 m a.s.l.)" },
-      { file: "reservoir_Agegate3_Susqueda.png", label: "Temps de residència porta 3 Susqueda (303.0 m a.s.l.)" },
-      { file: "reservoir_Agegate4_Susqueda.png", label: "Temps de residència porta 4 Susqueda (287.0 m a.s.l.)" },
-      { file: "reservoir_Peakgate1_Susqueda.png", label: "Temps fins al pic porta 1 Susqueda (335.0 m a.s.l.)" },
-      { file: "reservoir_Peakgate2_Susqueda.png", label: "Temps fins al pic porta 2 Susqueda (319.0 m a.s.l.)" },
-      { file: "reservoir_Peakgate3_Susqueda.png", label: "Temps fins al pic porta 3 Susqueda (303.0 m a.s.l.)" },
-      { file: "reservoir_Peakgate4_Susqueda.png", label: "Temps fins al pic porta 4 Susqueda (287.0 m a.s.l.)" }
+      { file: "reservoir_Peakgate1_Susqueda.png", label: "Temps de residència porta 1 Susqueda (335.0 m a.s.l.)" },
+      { file: "reservoir_Peakgate2_Susqueda.png", label: "Temps de residència porta 2 Susqueda (319.0 m a.s.l.)" },
+      { file: "reservoir_Peakgate3_Susqueda.png", label: "Temps de residència porta 3 Susqueda (303.0 m a.s.l.)" },
+      { file: "reservoir_Peakgate4_Susqueda.png", label: "Temps de residència porta 4 Susqueda (287.0 m a.s.l.)" }
     ]
   },
   // ── Tordera basin ──
@@ -439,7 +432,13 @@ function parseCsv(text) {
     return row;
   });
 }
-const VAR_LABEL = { Q_ter_sau: "Cabal entrada Sau (m³/s)", V_ter_all: "Volum Sau–Susqueda (hm³)" };
+const VAR_LABEL = {
+  Q_ter_sau: "Cabal entrada Sau (m³/s)", V_ter_all: "Volum Sau–Susqueda (hm³)",
+  rivtemp_ter_sau: "Temperatura del riu a Sau (°C)",
+  rgate1_Sau: "Sau · porta 1, 384.5 m (°C)", rgate2_Sau: "Sau · porta 2, 399.0 m (°C)", rgate3_Sau: "Sau · porta 3, 413.5 m (°C)",
+  rgate1_Susqueda: "Susqueda · porta 1, 335.0 m (°C)", rgate2_Susqueda: "Susqueda · porta 2, 319.0 m (°C)",
+  rgate3_Susqueda: "Susqueda · porta 3, 303.0 m (°C)", rgate4_Susqueda: "Susqueda · porta 4, 287.0 m (°C)"
+};
 async function loadSkillTable() {
   const tbody = document.querySelector("#skillTable tbody");
   try {
